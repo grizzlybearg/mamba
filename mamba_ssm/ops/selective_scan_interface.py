@@ -2,18 +2,18 @@
 
 import torch
 import torch.nn.functional as F
-from torch.cuda.amp import custom_bwd, custom_fwd
+from torch.amp import custom_bwd, custom_fwd # type: ignore
 
 from einops import rearrange, repeat
 
 try:
-    from causal_conv1d import causal_conv1d_fn
-    import causal_conv1d_cuda
+    from causal_conv1d import causal_conv1d_fn  # type: ignore
+    import causal_conv1d_cuda  # type: ignore
 except ImportError:
     causal_conv1d_fn = None
     causal_conv1d_cuda = None
 
-import selective_scan_cuda
+import selective_scan_cuda  # type: ignore
 
 
 class SelectiveScanFn(torch.autograd.Function):
@@ -160,7 +160,7 @@ def selective_scan_ref(u, delta, A, B, C, D=None, z=None, delta_bias=None, delta
 class MambaInnerFn(torch.autograd.Function):
 
     @staticmethod
-    @custom_fwd
+    @custom_fwd(device_type='cuda')
     def forward(ctx, xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
                 out_proj_weight, out_proj_bias,
                 A, B=None, C=None, D=None, delta_bias=None, B_proj_bias=None,
@@ -236,7 +236,7 @@ class MambaInnerFn(torch.autograd.Function):
         return F.linear(rearrange(out_z, "b d l -> b l d"), out_proj_weight, out_proj_bias)
 
     @staticmethod
-    @custom_bwd
+    @custom_bwd(device_type="cuda")
     def backward(ctx, dout):
         # dout: (batch, seqlen, dim)
         assert causal_conv1d_cuda is not None, "causal_conv1d_cuda is not available. Please install causal-conv1d."
